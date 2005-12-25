@@ -1,0 +1,12 @@
+Revision history for Sub-Install
+
+0.03    2005-11-22 19:00
+        install_installers to make Sub::Installer history
+
+0.02    2005-11-22 11:26
+        improved detection of sub names via B
+        100% coverage
+
+0.01    2005-11-21 22:28
+        the first version
+
