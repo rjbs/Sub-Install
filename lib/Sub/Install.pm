@@ -149,6 +149,15 @@ sub _reinstall {
   *$fullname = $code;
 }
 
+sub _install_fatal {
+  my ($code, $fullname) = @_;
+  no strict 'refs';
+  local $SIG{__WARN__} = sub {
+    Carp::croak "attempted to redefine existing code $fullname";
+  };
+  *$fullname = $code;
+}
+
 =head2 C< install_installers >
 
 This routine is provided to allow Sub::Install compatibility with

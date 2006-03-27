@@ -50,3 +50,12 @@ use warnings;
   package Other;
   ok1();
 }
+
+eval {
+  my $arg = { code => sub {}, into => 'Other', as => 'ok1' };
+  Sub::Install::_process_arg_and_install(
+    $arg,
+    \&Sub::Install::_install_fatal
+  );
+};
+like($@, qr/redefine/, $@);
