@@ -1,5 +1,5 @@
 use Sub::Install;
-use Test::More 'no_plan';
+use Test::More tests => 16;
 
 use strict;
 use warnings;
@@ -17,10 +17,20 @@ use warnings;
 }
 
 { # Install the same sub in the same package...
-  local $SIG{__WARN__}
-    = sub { pass('warned as expected') if $_[0] =~ /redefined/ };
+  my $redef = 0;
+  my $proto = 0;
+
+  local $SIG{__WARN__} = sub {
+    return ($redef = 1) if $_[0] =~ m{Subroutine \S+ redef.+t/install.t};
+    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t/install.t};
+    # pass("warned as expected: $_[0]") if $_[0] =~ /redefined/;
+    die "unexpected warning: @_";
+  };
 
   my $sub_ref = Sub::Install::install_sub({ code => \&is, as => 'ok1' });
+
+  ok($redef, 'we expected a warning about redefinition');
+  ok($proto, 'we expected a warning about prototype mismatch');
 
   isa_ok($sub_ref, 'CODE', 'return value of second install_sub');
 

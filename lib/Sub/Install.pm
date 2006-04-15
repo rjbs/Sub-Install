@@ -136,17 +136,51 @@ sub _process_arg_and_install {
 }
 
 # do the ugly work
+
+my $_install_warnings;
+my $_reinstall_warnings;
+BEGIN {
+  my $proto = qr/Prototype\ mismatch:\ sub\ .+?/x;
+  my $proto_or_redef = qr/Subroutine\ \S+\ redefined | $proto/x;
+
+  $_install_warnings   = qr/\A ( $proto_or_redef) \s at\ .+?\ line\ \d+\.  /x;
+  $_reinstall_warnings = qr/\A ( $proto         ) \s at\ .+?\ line\ \d+\.  /x;
+}
+
 sub _install {
   my ($code, $fullname) = @_;
   no strict 'refs';
-  *$fullname = $code;
+  my @warnings;
+  {
+    my $old_warn_sig = $SIG{__WARN__};
+    local $SIG{__WARN__} = sub {
+      my ($error) = @_;
+      if (my ($base_error) = $error =~ $_install_warnings) {
+        $error = Carp::shortmess $base_error;
+      }
+      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+    };
+    *$fullname = $code;
+  }
 }
 
 sub _reinstall {
   my ($code, $fullname) = @_;
   no strict 'refs';
-  no warnings;
-  *$fullname = $code;
+  my @warnings;
+  {
+    my $old_warn_sig = $SIG{__WARN__};
+    local $SIG{__WARN__} = sub {
+      my ($error) = @_;
+      if (my ($base_error) = $error =~ $_reinstall_warnings) {
+        $error = Carp::shortmess $base_error;
+      } elsif ($error =~ $_install_warnings) {
+        return;
+      }
+      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+    };
+    *$fullname = $code;
+  }
 }
 
 sub _install_fatal {

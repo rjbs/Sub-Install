@@ -19,10 +19,16 @@ use warnings;
 }
 
 { # Install the same sub in the same package...
-  local $SIG{__WARN__}
-    = sub { fail("warned unexpected: @_") if $_[0] =~ /redefined/ };
+  my $proto = 0;
+
+  local $SIG{__WARN__} = sub {
+    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t/reinstall.t};
+    die "unexpected warning: @_";
+  };
 
   my $sub_ref = reinstall_sub({ code => \&is, as => 'ok1' });
+
+  ok($proto, 'we expected a warning about prototype mismatch');
 
   isa_ok($sub_ref, 'CODE', 'return value of second install_sub');
 
