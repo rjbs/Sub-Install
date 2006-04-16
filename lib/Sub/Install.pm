@@ -140,11 +140,15 @@ sub _process_arg_and_install {
 my $_install_warnings;
 my $_reinstall_warnings;
 BEGIN {
-  my $proto = qr/Prototype\ mismatch:\ sub\ .+?/x;
-  my $proto_or_redef = qr/Subroutine\ \S+\ redefined | $proto/x;
+  my $misc = qr/
+    Prototype\ mismatch:\ sub\ .+?
+    |
+    Constant subroutine \S+ redefined
+  /x;
+  my $redef_or_misc = qr/Subroutine\ \S+\ redefined | $misc/x;
 
-  $_install_warnings   = qr/\A ( $proto_or_redef) \s at\ .+?\ line\ \d+\.  /x;
-  $_reinstall_warnings = qr/\A ( $proto         ) \s at\ .+?\ line\ \d+\.  /x;
+  $_install_warnings   = qr/\A ( $redef_or_misc ) \s at\ .+?\ line\ \d+\.  /x;
+  $_reinstall_warnings = qr/\A ( $misc          ) \s at\ .+?\ line\ \d+\.  /x;
 }
 
 sub _install {
