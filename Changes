@@ -1,5 +1,13 @@
 Revision history for Sub-Install
 
+0.90    2006-04-15
+        rewrite warning handling:
+          reinstall suppresses fewer warnings: only sub redefinition
+          relevant warnings warn from caller (like Carp)
+        YOUR CODE MAY BREAK:
+          the test/code and documentation differed on install_installers
+          the code has been changed to match the documentation
+
 0.03    2005-11-22 19:00
         install_installers to make Sub::Installer history
 

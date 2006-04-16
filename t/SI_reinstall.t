@@ -1,5 +1,5 @@
 use Sub::Install;
-Sub::Install::install_installers({ into => 'UNIVERSAL' });
+Sub::Install::install_installers('UNIVERSAL');
 
 # This test, from here on out, is the verbatim "reinstall.t" test from
 # Sub::Installer 0.0.2
