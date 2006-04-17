@@ -2,7 +2,6 @@ Changes
 lib/Sub/Install.pm
 Makefile.PL
 MANIFEST
-META.yml			# Will be created by "make dist"
 README
 t/00-load.t
 t/auto_as.t
