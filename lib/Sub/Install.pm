@@ -131,8 +131,6 @@ sub _process_arg_and_install {
     unless $arg->{as};
 
   $installer->($arg->{code} => $arg->{into} . '::' . $arg->{as});
-
-  return $arg->{code};
 }
 
 # do the ugly work
@@ -151,40 +149,34 @@ BEGIN {
   $_reinstall_warnings = qr/\A ( $misc          ) \s at\ .+?\ line\ \d+\.  /x;
 }
 
+sub _do_with_warn {
+  my ($code, $carp_re, $suppress_re) = @_;
+  my $old_warn_sig = $SIG{__WARN__};
+
+  local $SIG{__WARN__} = sub {
+    my ($error) = @_;
+    if (my ($base_error) = $error =~ $carp_re) {
+      $error = Carp::shortmess $base_error;
+    } elsif ($suppress_re and $error =~ $suppress_re) {
+      return;
+    }
+    $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+  };
+  $code->();
+}
+
 sub _install {
   my ($code, $fullname) = @_;
-  no strict 'refs';
-  my @warnings;
-  {
-    my $old_warn_sig = $SIG{__WARN__};
-    local $SIG{__WARN__} = sub {
-      my ($error) = @_;
-      if (my ($base_error) = $error =~ $_install_warnings) {
-        $error = Carp::shortmess $base_error;
-      }
-      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
-    };
-    *$fullname = $code;
-  }
+  my $inst = sub { no strict 'refs'; *$fullname = $code };
+  _do_with_warn($inst, $_install_warnings);
+  return $code;
 }
 
 sub _reinstall {
   my ($code, $fullname) = @_;
-  no strict 'refs';
-  my @warnings;
-  {
-    my $old_warn_sig = $SIG{__WARN__};
-    local $SIG{__WARN__} = sub {
-      my ($error) = @_;
-      if (my ($base_error) = $error =~ $_reinstall_warnings) {
-        $error = Carp::shortmess $base_error;
-      } elsif ($error =~ $_install_warnings) {
-        return;
-      }
-      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
-    };
-    *$fullname = $code;
-  }
+  my $inst = sub { no strict 'refs'; *$fullname = $code };
+  _do_with_warn($inst, $_reinstall_warnings, $_install_warnings);
+  return $code;
 }
 
 sub _install_fatal {
