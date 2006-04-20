@@ -79,22 +79,12 @@ is the same as:
     as   => 'dance',
   });
 
-=cut
-
-sub install_sub {
-  _process_arg_and_install($_[0], \&_install);
-}
-
 =head2 C< reinstall_sub >
 
 This routine behaves exactly like C<L</install_sub>>, but does not emit a
 warning if warnings are on and the destination is already defined.
 
 =cut
-
-sub reinstall_sub {
-  _process_arg_and_install($_[0], \&_reinstall);
-}
 
 # do the heavy lifting
 sub _process_arg_and_install {
@@ -130,62 +120,104 @@ sub _process_arg_and_install {
   croak "couldn't determine name under which to install subroutine"
     unless $arg->{as};
 
-  $installer->($arg->{code} => $arg->{into} . '::' . $arg->{as});
+  $installer->(@$arg{qw(into as code) });
 }
 
 # do the ugly work
 
 my $_install_warnings;
 my $_reinstall_warnings;
+my $_reinstall_suppress;
 BEGIN {
   my $misc = qr/
     Prototype\ mismatch:\ sub\ .+?
     |
     Constant subroutine \S+ redefined
   /x;
-  my $redef_or_misc = qr/Subroutine\ \S+\ redefined | $misc/x;
+  my $redef = qr/Subroutine\ \S+\ redefined/x;
+  my $redef_or_misc = qr/$redef | $misc/x;
 
   $_install_warnings   = qr/\A ( $redef_or_misc ) \s at\ .+?\ line\ \d+\.  /x;
   $_reinstall_warnings = qr/\A ( $misc          ) \s at\ .+?\ line\ \d+\.  /x;
+  $_reinstall_suppress = qr/\A ( $redef         ) \s at\ .+?\ line\ \d+\.  /x;
 }
+
+# _do_with_warn(\&sub, [
+#   $re1 => 'carp',
+#   $re2 => 'carp',
+#   $re3 => 'suppress',
+# ]);
+# default behavior is to pass warning along
+# order: carp -> suppress -> pass
 
 sub _do_with_warn {
-  my ($code, $carp_re, $suppress_re) = @_;
-  my $old_warn_sig = $SIG{__WARN__};
+  my ($patterns) = @_;
+  sub {
+    my ($code) = @_;
 
-  local $SIG{__WARN__} = sub {
-    my ($error) = @_;
-    if (my ($base_error) = $error =~ $carp_re) {
-      $error = Carp::shortmess $base_error;
-    } elsif ($suppress_re and $error =~ $suppress_re) {
-      return;
-    }
-    $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+    my $old_warn_sig = $SIG{__WARN__};
+    local $SIG{__WARN__} = sub {
+      my ($error) = @_;
+      if ($patterns->{suppress}) {
+        for (@{ $patterns->{suppress} }) {
+          return if $error =~ $_;
+        }
+      }
+      if ($patterns->{carp}) {
+        CARP: for (@{ $patterns->{carp} }) {
+          if (my ($base_error) = $error =~ $_) {
+            $error = Carp::shortmess $base_error;
+            last CARP;
+          }
+        }
+      }
+      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+    };
+    $code->();
   };
-  $code->();
 }
 
-sub _install {
-  my ($code, $fullname) = @_;
-  my $inst = sub { no strict 'refs'; *$fullname = $code };
-  _do_with_warn($inst, $_install_warnings);
-  return $code;
+sub _generate_installer {
+  my ($arg) = @_;
+  sub {
+    my ($pkg, $name, $code) = @_;
+    my $inst = sub {
+      no strict 'refs';
+      *{"$pkg\::$name"} = $code;
+    };
+    $arg->{inst_wrapper} ? $arg->{inst_wrapper}->($inst) : $inst->();
+    return $code;
+  }
 }
 
-sub _reinstall {
-  my ($code, $fullname) = @_;
-  my $inst = sub { no strict 'refs'; *$fullname = $code };
-  _do_with_warn($inst, $_reinstall_warnings, $_install_warnings);
-  return $code;
+BEGIN {
+  my $install   = _generate_installer({
+    inst_wrapper => _do_with_warn({ carp => [ $_install_warnings ] }),
+  });
+
+  my $reinstall = _generate_installer({
+    inst_wrapper => _do_with_warn({
+      carp     => [ $_reinstall_warnings ],
+      suppress => [ $_reinstall_suppress ],
+    }),
+  });
+  
+  *install_sub = sub {
+    _process_arg_and_install($_[0], $install);
+  };
+
+  *reinstall_sub = sub {
+    _process_arg_and_install($_[0], $reinstall);
+  };
 }
 
 sub _install_fatal {
-  my ($code, $fullname) = @_;
+  my ($pkg, $name, $code) = @_;
   no strict 'refs';
   local $SIG{__WARN__} = sub {
-    Carp::croak "attempted to redefine existing code $fullname";
+    Carp::croak "attempted to redefine existing code $pkg\::$name";
   };
-  *$fullname = $code;
+  *{"$pkg\::$name"} = $code;
 }
 
 =head2 C< install_installers >
