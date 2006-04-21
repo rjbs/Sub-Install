@@ -87,68 +87,59 @@ warning if warnings are on and the destination is already defined.
 =cut
 
 # do the heavy lifting
-sub _process_arg_and_install {
-  my ($arg, $installer) = @_;
+sub _build_public_installer {
+  my ($installer) = @_;
 
-  # We're "guaranteed" to be called by one layer of indirection.
-  my ($calling_pkg) = caller(1);
+  sub {
+    my ($arg) = @_;
+    my ($calling_pkg) = caller(0);
 
-  # I'd rather use ||= but I'm whoring for Devel::Cover.
-  $arg->{into} = $calling_pkg unless $arg->{into};
-  $arg->{from} = $calling_pkg unless $arg->{from};
+    # I'd rather use ||= but I'm whoring for Devel::Cover.
+    $arg->{into} = $calling_pkg unless $arg->{into};
+    $arg->{from} = $calling_pkg unless $arg->{from};
 
-  # This is the only absolutely required argument, in many cases.
-  croak "named argument 'code' is not optional" unless $arg->{code};
+    # This is the only absolutely required argument, in many cases.
+    croak "named argument 'code' is not optional" unless $arg->{code};
 
-  if (ref $arg->{code} eq 'CODE') {
-    # try to generate target name by looking up source's name
-    unless ($arg->{as}) {
-      require B;
-      my $name = B::svref_2object($arg->{code})->GV->NAME;
-      $arg->{as} = $name unless $name =~ /\A__ANON__/;
+    if (ref $arg->{code} eq 'CODE') {
+      # try to generate target name by looking up source's name
+      unless ($arg->{as}) {
+        require B;
+        my $name = B::svref_2object($arg->{code})->GV->NAME;
+        $arg->{as} = $name unless $name =~ /\A__ANON__/;
+      }
+    } else {
+      my $code = $arg->{from}->can($arg->{code});
+
+      croak
+        "couldn't find subroutine named $arg->{code} in package $arg->{from}"
+        unless $code;
+
+      $arg->{as}   = $arg->{code} unless $arg->{as};
+      $arg->{code} = $code;
     }
-  } else {
-    my $code = $arg->{from}->can($arg->{code});
 
-    croak "couldn't find subroutine named $arg->{code} in package $arg->{from}"
-      unless $code;
+    croak "couldn't determine name under which to install subroutine"
+      unless $arg->{as};
 
-    $arg->{as}   = $arg->{code} unless $arg->{as};
-    $arg->{code} = $code;
+    $installer->(@$arg{qw(into as code) });
   }
-
-  croak "couldn't determine name under which to install subroutine"
-    unless $arg->{as};
-
-  $installer->(@$arg{qw(into as code) });
 }
 
 # do the ugly work
 
-my $_install_warnings;
-my $_reinstall_warnings;
-my $_reinstall_suppress;
+my $_misc_warn_re;
+my $_redef_warn_re;
 BEGIN {
-  my $misc = qr/
-    Prototype\ mismatch:\ sub\ .+?
-    |
+  $_misc_warn_re = qr/
+    Prototype\ mismatch:\ sub\ .+?  |
     Constant subroutine \S+ redefined
   /x;
-  my $redef = qr/Subroutine\ \S+\ redefined/x;
-  my $redef_or_misc = qr/$redef | $misc/x;
-
-  $_install_warnings   = qr/\A ( $redef_or_misc ) \s at\ .+?\ line\ \d+\.  /x;
-  $_reinstall_warnings = qr/\A ( $misc          ) \s at\ .+?\ line\ \d+\.  /x;
-  $_reinstall_suppress = qr/\A ( $redef         ) \s at\ .+?\ line\ \d+\.  /x;
+  $_redef_warn_re = qr/Subroutine\ \S+\ redefined/x;
 }
 
-# _do_with_warn(\&sub, [
-#   $re1 => 'carp',
-#   $re2 => 'carp',
-#   $re3 => 'suppress',
-# ]);
-# default behavior is to pass warning along
-# order: carp -> suppress -> pass
+my $eow_re;
+BEGIN { $eow_re = qr/ at .+? line \d+\.\Z/ };
 
 sub _do_with_warn {
   my ($patterns) = @_;
@@ -158,24 +149,18 @@ sub _do_with_warn {
     my $old_warn_sig = $SIG{__WARN__};
     local $SIG{__WARN__} = sub {
       my ($error) = @_;
-      if ($patterns->{suppress}) {
-        for (@{ $patterns->{suppress} }) {
+      for (@{ $patterns->{suppress} }) {
           return if $error =~ $_;
+      }
+      for (@{ $patterns->{croak} }) {
+        if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
+          Carp::croak $base_error;
         }
       }
-      if ($patterns->{croak}) {
-         for (@{ $patterns->{croak} }) {
-          if (my ($base_error) = $error =~ $_) {
-            Carp::croak $base_error;
-          }
-        }
-      }
-      if ($patterns->{carp}) {
-        CARP: for (@{ $patterns->{carp} }) {
-          if (my ($base_error) = $error =~ $_) {
-            $error = Carp::shortmess $base_error;
-            last CARP;
-          }
+      CARP: for (@{ $patterns->{carp} }) {
+        if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
+          $error = Carp::shortmess $base_error;
+          last CARP;
         }
       }
       $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
@@ -199,45 +184,40 @@ sub _generate_installer {
 
 BEGIN {
   my $install   = _generate_installer({
-    inst_wrapper => _do_with_warn({ carp => [ $_install_warnings ] }),
+    inst_wrapper => _do_with_warn({
+      carp => [ $_misc_warn_re, $_redef_warn_re ]
+    }),
   });
+
+  *install_sub = _build_public_installer($install);
 
   my $reinstall = _generate_installer({
     inst_wrapper => _do_with_warn({
-      carp     => [ $_reinstall_warnings ],
-      suppress => [ $_reinstall_suppress ],
+      carp     => [ $_misc_warn_re ],
+      suppress => [ $_redef_warn_re ],
     }),
   });
-  
-  *install_sub = sub {
-    _process_arg_and_install($_[0], $install);
-  };
 
-  *reinstall_sub = sub {
-    _process_arg_and_install($_[0], $reinstall);
-  };
-}
+  *reinstall_sub = _build_public_installer($reinstall);
 
-sub _install_fatal {
-  my ($pkg, $name, $code) = @_;
-  no strict 'refs';
-  local $SIG{__WARN__} = sub {
-    Carp::croak "attempted to redefine existing code $pkg\::$name";
-  };
-  *{"$pkg\::$name"} = $code;
+  *_install_fatal = _generate_installer({
+    inst_wrapper => _do_with_warn({
+      croak    => [ $_redef_warn_re ],
+    }),
+  });
 }
 
 =head2 C< install_installers >
 
 This routine is provided to allow Sub::Install compatibility with
-Sub::Installer.  It installs C<install_sub> and C<reinstall_sub> methods on the
-package in its C<into> argument.
+Sub::Installer.  It installs C<install_sub> and C<reinstall_sub> methods into
+the package named by its argument.
 
  Sub::Install::install_installers('Code::Builder'); # just for us, please
  Code::Builder->install_sub({ name => $code_ref });
 
  Sub::Install::install_installers('UNIVERSAL'); # feeling lucky, punk?
- Anything::At::All->install_sub({ moniker => $sub_ref });
+ Anything::At::All->install_sub({ name => $code_ref });
 
 The installed installers are similar, but not identical, to those provided by
 Sub::Installer.  They accept a single hash as an argument.  The key/value pairs
@@ -272,7 +252,6 @@ sub install_installers {
   }
 }
 
-
 =head1 EXPORTS
 
 Sub::Install exports C<install_sub> and C<reinstall_sub> only if they are
@@ -280,15 +259,16 @@ requested.
 
 =cut
 
+my @EXPORT_OK;
+BEGIN { @EXPORT_OK = qw(install_sub reinstall_sub); }
+
 sub import {
-  my $class  = shift;
-  my %import = map { $_ => 1 } @_;
+  my $class = shift;
+  my %todo  = map { $_ => 1 } @_;
   my ($target) = caller(0);
 
   # eating my own dogfood
-  for (qw(install_sub reinstall_sub)) {
-    install_sub({ code => $_, into => $target }) if ($import{$_});
-  }
+  install_sub({ code => $_, into => $target }) for grep {$todo{$_}} @EXPORT_OK;
 }
 
 =head1 SEE ALSO
@@ -302,6 +282,10 @@ does the same thing, but does it by getting its greasy fingers all over
 UNIVERSAL.  I was really happy about the idea of making the installation of
 coderefs less ugly, but I couldn't bring myself to replace the ugliness of
 typeglobs and loosened strictures with the ugliness of UNIVERSAL methods.
+
+=item L<Sub::Exporter>
+
+This is a complete Exporter.pm replacement, built atop Sub::Install.
 
 =back
 
@@ -321,7 +305,7 @@ changes.
 
 =head1 COPYRIGHT
 
-Copyright 2005 Ricardo Signes, All Rights Reserved.
+Copyright 2005-2006 Ricardo Signes, All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
