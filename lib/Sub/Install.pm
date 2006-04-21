@@ -143,67 +143,62 @@ BEGIN { $eow_re = qr/ at .+? line \d+\.\Z/ };
 
 sub _do_with_warn {
   my ($arg) = @_;
-  sub {
-    my ($code) = @_;
-
-    my $warn = $SIG{__WARN__} ? $SIG{__WARN__} : sub { warn @_ };
-    local $SIG{__WARN__} = sub {
-      my ($error) = @_;
-      for (@{ $arg->{suppress} }) {
-          return if $error =~ $_;
-      }
-      for (@{ $arg->{croak} }) {
-        if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
-          Carp::croak $base_error;
+  my $code = delete $arg->{code};
+  my $wants_code = sub {
+    my $code = shift;
+    sub {
+      my $warn = $SIG{__WARN__} ? $SIG{__WARN__} : sub { warn @_ };
+      local $SIG{__WARN__} = sub {
+        my ($error) = @_;
+        for (@{ $arg->{suppress} }) {
+            return if $error =~ $_;
         }
-      }
-      for (@{ $arg->{carp} }) {
-        if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
-          return $warn->(Carp::shortmess $base_error);
-          last;
+        for (@{ $arg->{croak} }) {
+          if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
+            Carp::croak $base_error;
+          }
         }
-      }
-      ($arg->{default} || $warn)->($error);
+        for (@{ $arg->{carp} }) {
+          if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
+            return $warn->(Carp::shortmess $base_error);
+            last;
+          }
+        }
+        ($arg->{default} || $warn)->($error);
+      };
+      $code->(@_);
     };
-    $code->();
   };
+  return $wants_code->($code) if $code;
+  return $wants_code;
 }
 
-sub _generate_installer {
-  my ($arg) = @_;
+sub _installer {
   sub {
     my ($pkg, $name, $code) = @_;
-    my $inst = sub {
-      no strict 'refs';
-      *{"$pkg\::$name"} = $code;
-      return $code;
-    };
-    $arg->{inst_wrapper} ? $arg->{inst_wrapper}->($inst) : $inst->();
+    no strict 'refs';
+    *{"$pkg\::$name"} = $code;
+    return $code;
   }
 }
 
 BEGIN {
-  my $install   = _generate_installer({
-    inst_wrapper => _do_with_warn({
-      carp => [ $_misc_warn_re, $_redef_warn_re ]
-    }),
+  *_ignore_warnings = _do_with_warn({
+    carp => [ $_misc_warn_re, $_redef_warn_re ]
   });
 
-  *install_sub = _build_public_installer($install);
+  *install_sub = _build_public_installer(_ignore_warnings(_installer));
 
-  my $reinstall = _generate_installer({
-    inst_wrapper => _do_with_warn({
-      carp     => [ $_misc_warn_re ],
-      suppress => [ $_redef_warn_re ],
-    }),
+  *_carp_warnings =  _do_with_warn({
+    carp     => [ $_misc_warn_re ],
+    suppress => [ $_redef_warn_re ],
   });
 
-  *reinstall_sub = _build_public_installer($reinstall);
+  *reinstall_sub = _build_public_installer(_carp_warnings(_installer));
 
-  *_install_fatal = _generate_installer({
-    inst_wrapper => _do_with_warn({
-      croak    => [ $_redef_warn_re ],
-    }),
+  *_install_fatal = _do_with_warn({
+    code     => _installer,
+    croak    => [ $_redef_warn_re ],
   });
 }
 

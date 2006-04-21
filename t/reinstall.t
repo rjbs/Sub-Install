@@ -79,4 +79,5 @@ eval {
   my $arg = { code => sub {}, into => 'Other', as => 'ok1' };
   Sub::Install::_build_public_installer(\&Sub::Install::_install_fatal)->($arg);
 };
+
 like($@, qr/redefine/, "(experimental fatal installer should croak)");
