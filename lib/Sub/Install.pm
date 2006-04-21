@@ -86,6 +86,14 @@ warning if warnings are on and the destination is already defined.
 
 =cut
 
+sub _name_of_code {
+  my ($code) = @_;
+  require B;
+  my $name = B::svref_2object($code)->GV->NAME;
+  return $name unless $name =~ /\A__ANON__/;
+  return;
+}
+
 # do the heavy lifting
 sub _build_public_installer {
   my ($installer) = @_;
@@ -95,25 +103,17 @@ sub _build_public_installer {
     my ($calling_pkg) = caller(0);
 
     # I'd rather use ||= but I'm whoring for Devel::Cover.
-    $arg->{into} = $calling_pkg unless $arg->{into};
-    $arg->{from} = $calling_pkg unless $arg->{from};
+    for (qw(into from)) { $arg->{$_} ||= $calling_pkg unless $arg->{$_} }
 
     # This is the only absolutely required argument, in many cases.
     croak "named argument 'code' is not optional" unless $arg->{code};
 
     if (ref $arg->{code} eq 'CODE') {
-      # try to generate target name by looking up source's name
-      unless ($arg->{as}) {
-        require B;
-        my $name = B::svref_2object($arg->{code})->GV->NAME;
-        $arg->{as} = $name unless $name =~ /\A__ANON__/;
-      }
+      $arg->{as} ||= _name_of_code($arg->{code});
     } else {
-      my $code = $arg->{from}->can($arg->{code});
-
       croak
         "couldn't find subroutine named $arg->{code} in package $arg->{from}"
-        unless $code;
+        unless my $code = $arg->{from}->can($arg->{code});
 
       $arg->{as}   = $arg->{code} unless $arg->{as};
       $arg->{code} = $code;
