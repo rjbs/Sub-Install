@@ -103,7 +103,7 @@ sub _build_public_installer {
     my ($calling_pkg) = caller(0);
 
     # I'd rather use ||= but I'm whoring for Devel::Cover.
-    for (qw(into from)) { $arg->{$_} ||= $calling_pkg unless $arg->{$_} }
+    for (qw(into from)) { $arg->{$_} = $calling_pkg unless $arg->{$_} }
 
     # This is the only absolutely required argument, in many cases.
     croak "named argument 'code' is not optional" unless $arg->{code};
@@ -142,28 +142,28 @@ my $eow_re;
 BEGIN { $eow_re = qr/ at .+? line \d+\.\Z/ };
 
 sub _do_with_warn {
-  my ($patterns) = @_;
+  my ($arg) = @_;
   sub {
     my ($code) = @_;
 
-    my $old_warn_sig = $SIG{__WARN__};
+    my $warn = $SIG{__WARN__} ? $SIG{__WARN__} : sub { warn @_ };
     local $SIG{__WARN__} = sub {
       my ($error) = @_;
-      for (@{ $patterns->{suppress} }) {
+      for (@{ $arg->{suppress} }) {
           return if $error =~ $_;
       }
-      for (@{ $patterns->{croak} }) {
+      for (@{ $arg->{croak} }) {
         if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
           Carp::croak $base_error;
         }
       }
-      CARP: for (@{ $patterns->{carp} }) {
+      for (@{ $arg->{carp} }) {
         if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
-          $error = Carp::shortmess $base_error;
-          last CARP;
+          return $warn->(Carp::shortmess $base_error);
+          last;
         }
       }
-      $old_warn_sig ? $old_warn_sig->($error) : (warn $error)
+      ($arg->{default} || $warn)->($error);
     };
     $code->();
   };
@@ -176,9 +176,9 @@ sub _generate_installer {
     my $inst = sub {
       no strict 'refs';
       *{"$pkg\::$name"} = $code;
+      return $code;
     };
     $arg->{inst_wrapper} ? $arg->{inst_wrapper}->($inst) : $inst->();
-    return $code;
   }
 }
 
