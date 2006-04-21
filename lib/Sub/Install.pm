@@ -163,6 +163,13 @@ sub _do_with_warn {
           return if $error =~ $_;
         }
       }
+      if ($patterns->{croak}) {
+         for (@{ $patterns->{croak} }) {
+          if (my ($base_error) = $error =~ $_) {
+            Carp::croak $base_error;
+          }
+        }
+      }
       if ($patterns->{carp}) {
         CARP: for (@{ $patterns->{carp} }) {
           if (my ($base_error) = $error =~ $_) {
