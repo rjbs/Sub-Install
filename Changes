@@ -1,5 +1,8 @@
 Revision history for Sub-Install
 
+0.91    2006-04-30
+        use _CALLABLE to determine callability of code, not ref
+
 0.90    2006-04-15
         rewrite warning handling:
           reinstall suppresses fewer warnings: only sub redefinition
