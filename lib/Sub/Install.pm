@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Carp qw(croak);
+use Scalar::Util ();
 
 =head1 NAME
 
@@ -94,6 +95,11 @@ sub _name_of_code {
   return;
 }
 
+sub _CALLABLE {
+  (Scalar::Util::reftype($_[0])||'') eq 'CODE' or Scalar::Util::blessed($_[0])
+    and overload::Method($_[0],'&{}') ? $_[0] : undef;
+}
+
 # do the heavy lifting
 sub _build_public_installer {
   my ($installer) = @_;
@@ -108,7 +114,7 @@ sub _build_public_installer {
     # This is the only absolutely required argument, in many cases.
     croak "named argument 'code' is not optional" unless $arg->{code};
 
-    if (ref $arg->{code} eq 'CODE') {
+    if (_CALLABLE($arg->{code})) {
       $arg->{as} ||= _name_of_code($arg->{code});
     } else {
       croak
