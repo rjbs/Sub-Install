@@ -5,6 +5,7 @@ MANIFEST
 README
 t/00-load.t
 t/auto_as.t
+t/export.t
 t/install.t
 t/inst-blessed.t
 t/misc_errors.t

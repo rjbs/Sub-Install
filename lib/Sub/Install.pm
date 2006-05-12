@@ -3,7 +3,7 @@ package Sub::Install;
 use warnings;
 use strict;
 
-use Carp qw(croak);
+use Carp;
 use Scalar::Util ();
 
 =head1 NAME
@@ -12,13 +12,13 @@ Sub::Install - install subroutines into packages easily
 
 =head1 VERSION
 
-version 0.91
+version 0.92
 
  $Id: /my/rjbs/subinst/trunk/lib/Sub/Install.pm 16622 2005-11-23T00:17:55.304991Z rjbs  $
 
 =cut
 
-our $VERSION = '0.91';
+our $VERSION = '0.92';
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ see them.
 
 =head1 FUNCTIONS
 
-=head2 C< install_sub >
+=head2 install_sub
 
   Sub::Install::install_sub({
    code => \&subroutine,
@@ -80,7 +80,7 @@ is the same as:
     as   => 'dance',
   });
 
-=head2 C< reinstall_sub >
+=head2 reinstall_sub
 
 This routine behaves exactly like C<L</install_sub>>, but does not emit a
 warning if warnings are on and the destination is already defined.
@@ -95,7 +95,8 @@ sub _name_of_code {
   return;
 }
 
-sub _CALLABLE {
+# See also Params::Util, to which this code was donated.
+sub _CODELIKE {
   (Scalar::Util::reftype($_[0])||'') eq 'CODE' or Scalar::Util::blessed($_[0])
     and overload::Method($_[0],'&{}') ? $_[0] : undef;
 }
@@ -112,12 +113,12 @@ sub _build_public_installer {
     for (qw(into from)) { $arg->{$_} = $calling_pkg unless $arg->{$_} }
 
     # This is the only absolutely required argument, in many cases.
-    croak "named argument 'code' is not optional" unless $arg->{code};
+    Carp::croak "named argument 'code' is not optional" unless $arg->{code};
 
-    if (_CALLABLE($arg->{code})) {
+    if (_CODELIKE($arg->{code})) {
       $arg->{as} ||= _name_of_code($arg->{code});
     } else {
-      croak
+      Carp::croak
         "couldn't find subroutine named $arg->{code} in package $arg->{from}"
         unless my $code = $arg->{from}->can($arg->{code});
 
@@ -125,7 +126,7 @@ sub _build_public_installer {
       $arg->{code} = $code;
     }
 
-    croak "couldn't determine name under which to install subroutine"
+    Carp::croak "couldn't determine name under which to install subroutine"
       unless $arg->{as};
 
     $installer->(@$arg{qw(into as code) });
@@ -208,7 +209,7 @@ BEGIN {
   });
 }
 
-=head2 C< install_installers >
+=head2 install_installers
 
 This routine is provided to allow Sub::Install compatibility with
 Sub::Installer.  It installs C<install_sub> and C<reinstall_sub> methods into
@@ -258,19 +259,34 @@ sub install_installers {
 Sub::Install exports C<install_sub> and C<reinstall_sub> only if they are
 requested.
 
+=head2 exporter
+
+Sub::Install has a never-exported subroutine called C<exporter>, which is used
+to implement its C<import> routine.  It takes a hashref of named arguments,
+only one of which is currently recognize: C<exports>.  This must be an arrayref
+of subroutines to offer for export.
+
+This routine is mainly for Sub::Install's own consumption.  Instead, consider
+L<Sub::Exporter>.
+
 =cut
 
-my @EXPORT_OK;
-BEGIN { @EXPORT_OK = qw(install_sub reinstall_sub); }
+sub exporter {
+  my ($arg) = @_;
+  
+  my %is_exported = map { $_ => undef } @{ $arg->{exports} };
 
-sub import {
-  my $class = shift;
-  my %todo  = map { $_ => 1 } @_;
-  my ($target) = caller(0);
-
-  # eating my own dogfood
-  install_sub({ code => $_, into => $target }) for grep {$todo{$_}} @EXPORT_OK;
+  sub {
+    my $class = shift;
+    my $target = caller;
+    for (@_) {
+      Carp::croak "'$_' is not exported by $class" if !exists $is_exported{$_};
+      install_sub({ code => $_, from => $class, into => $target });
+    }
+  }
 }
+
+BEGIN { *import = exporter({ exports => [ qw(install_sub reinstall_sub) ] }); }
 
 =head1 SEE ALSO
 
