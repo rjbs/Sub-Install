@@ -28,10 +28,15 @@ use warnings;
 Prototype mismatch: sub main::tmp_ok ($;$) vs ($$;$) at t/reinstall.t line 32
 END_WARNING
 
-    stderr_is(
-      sub { Sub::Install::reinstall_sub({ code => \&is, as => 'tmp_ok' }) },
+    my $stderr = Test::Output::stderr_from(
+      sub { Sub::Install::reinstall_sub({ code => \&is, as => 'tmp_ok' }) }
+    );
+
+    $stderr =~ s!\\!/!g;
+    is(
+      $stderr,
       $expected_warning,
-      "correct warnings went out STDERR",
+      "got expected warning",
     );
   }
 }

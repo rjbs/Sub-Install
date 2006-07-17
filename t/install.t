@@ -27,9 +27,15 @@ Subroutine main::tmp_ok redefined at t/install.t line 31
 Prototype mismatch: sub main::tmp_ok ($;$) vs ($$;$) at t/install.t line 31
 END_WARNING
 
-    stderr_is(
-      sub { Sub::Install::install_sub({ code => \&is, as => 'tmp_ok' }) },
+    my $stderr = Test::Output::stderr_from(
+      sub { Sub::Install::install_sub({ code => \&is, as => 'tmp_ok' }) }
+    );
+
+    $stderr =~ s!\\!/!g;
+    is(
+      $stderr,
       $expected_warning,
+      "got expected warning",
     );
   }
 }

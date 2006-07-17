@@ -1,5 +1,9 @@
 Revision history for Sub-Install
 
+0.921   2006-07-16
+        fix filename-matching in output tests for win32 (20484, thanks Alex
+        Chorny!)
+
 0.92    2006-05-11
         allow other users to build exporters like our tiny one (&exporter)
         rename _CALLABLE to _CODELIKE to keep up with Params::Util
