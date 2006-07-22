@@ -45,8 +45,8 @@ END_WARNING
   my $proto = 0;
 
   local $SIG{__WARN__} = sub {
-    return ($redef = 1) if $_[0] =~ m{Subroutine \S+ redef.+t/install.t};
-    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t/install.t};
+    return ($redef = 1) if $_[0] =~ m{Subroutine \S+ redef.+t.install\.t};
+    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t.install\.t};
     # pass("warned as expected: $_[0]") if $_[0] =~ /redefined/;
     die "unexpected warning: @_";
   };

@@ -12,13 +12,13 @@ Sub::Install - install subroutines into packages easily
 
 =head1 VERSION
 
-version 0.921
+version 0.922
 
  $Id: /my/rjbs/subinst/trunk/lib/Sub/Install.pm 16622 2005-11-23T00:17:55.304991Z rjbs  $
 
 =cut
 
-our $VERSION = '0.921';
+our $VERSION = '0.922';
 
 =head1 SYNOPSIS
 

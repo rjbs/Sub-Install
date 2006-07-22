@@ -45,7 +45,7 @@ END_WARNING
   my $proto = 0;
 
   local $SIG{__WARN__} = sub {
-    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t/reinstall.t};
+    return ($proto = 1) if $_[0] =~ m{Prototype mismatch.+t.reinstall\.t};
     die "unexpected warning: @_";
   };
 
