@@ -7,6 +7,7 @@ WriteMakefile(
     AUTHOR              => 'Ricardo Signes <rjbs@cpan.org>',
     VERSION_FROM        => 'lib/Sub/Install.pm',
     ABSTRACT_FROM       => 'lib/Sub/Install.pm',
+    LICENSE             => 'perl',
     PL_FILES            => {},
     PREREQ_PM => {
         'Scalar::Util' => 0,
