@@ -168,7 +168,6 @@ sub _do_with_warn {
         for (@{ $arg->{carp} }) {
           if (my ($base_error) = $error =~ /\A($_) $eow_re/x) {
             return $warn->(Carp::shortmess $base_error);
-            last;
           }
         }
         ($arg->{default} || $warn)->($error);
@@ -183,7 +182,7 @@ sub _do_with_warn {
 sub _installer {
   sub {
     my ($pkg, $name, $code) = @_;
-    no strict 'refs';
+    no strict 'refs'; ## no critic ProhibitNoStrict
     *{"$pkg\::$name"} = $code;
     return $code;
   }
