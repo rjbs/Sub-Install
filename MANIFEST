@@ -15,3 +15,4 @@ t/reinstall.t
 t/SI_install.t
 t/SI_reinstall.t
 t/perl-critic.t
+LICENSE
