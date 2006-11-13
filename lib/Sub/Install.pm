@@ -12,13 +12,13 @@ Sub::Install - install subroutines into packages easily
 
 =head1 VERSION
 
-version 0.922
+version 0.923
 
  $Id: /my/rjbs/subinst/trunk/lib/Sub/Install.pm 16622 2005-11-23T00:17:55.304991Z rjbs  $
 
 =cut
 
-our $VERSION = '0.922';
+our $VERSION = '0.923';
 
 =head1 SYNOPSIS
 
@@ -97,8 +97,9 @@ sub _name_of_code {
 
 # See also Params::Util, to which this code was donated.
 sub _CODELIKE {
-  (Scalar::Util::reftype($_[0])||'') eq 'CODE' or Scalar::Util::blessed($_[0])
-    and overload::Method($_[0],'&{}') ? $_[0] : undef;
+  (Scalar::Util::reftype($_[0])||'') eq 'CODE'
+  || Scalar::Util::blessed($_[0])
+  && (overload::Method($_[0],'&{}') ? $_[0] : undef);
 }
 
 # do the heavy lifting
@@ -154,7 +155,7 @@ sub _do_with_warn {
   my $wants_code = sub {
     my $code = shift;
     sub {
-      my $warn = $SIG{__WARN__} ? $SIG{__WARN__} : sub { warn @_ };
+      my $warn = $SIG{__WARN__} ? $SIG{__WARN__} : sub { warn @_ }; ## no critic
       local $SIG{__WARN__} = sub {
         my ($error) = @_;
         for (@{ $arg->{suppress} }) {

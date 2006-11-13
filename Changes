@@ -1,5 +1,8 @@
 Revision history for Sub-Install
 
+0.923   2006-11-13
+        packaging improvements
+
 0.922   2006-07-21
         fix filename-matching in output tests for win32 (20617, thanks Jerry
         Gay!) (Couldn't reproduce this one.  Argh!)
