@@ -14,7 +14,7 @@ Sub::Install - install subroutines into packages easily
 
 version 0.923
 
- $Id: /my/rjbs/subinst/trunk/lib/Sub/Install.pm 16622 2005-11-23T00:17:55.304991Z rjbs  $
+ $Id$
 
 =cut
 
