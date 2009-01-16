@@ -12,13 +12,11 @@ Sub::Install - install subroutines into packages easily
 
 =head1 VERSION
 
-version 0.924
-
- $Id$
+version 0.925
 
 =cut
 
-our $VERSION = '0.924';
+our $VERSION = '0.925';
 
 =head1 SYNOPSIS
 
@@ -315,10 +313,9 @@ Sub-Installer distribution.
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-sub-install@rt.cpan.org>,
-or through the web interface at L<http://rt.cpan.org>.  I will be notified, and
-then you'll automatically be notified of progress on your bug as I make
-changes.
+Please report any bugs or feature requests through the web interface at
+L<http://rt.cpan.org>.  I will be notified, and then you'll automatically be
+notified of progress on your bug as I make changes.
 
 =head1 COPYRIGHT
 
