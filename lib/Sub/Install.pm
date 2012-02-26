@@ -12,11 +12,11 @@ Sub::Install - install subroutines into packages easily
 
 =head1 VERSION
 
-version 0.925
+version 0.926
 
 =cut
 
-our $VERSION = '0.925';
+our $VERSION = '0.926';
 
 =head1 SYNOPSIS
 

@@ -1,5 +1,8 @@
 Revision history for Sub-Install
 
+0.926   2012-02-26
+        cope with terminal dots from new Carp
+
 0.925   2009-01-16
         add repo loc to metadata
 

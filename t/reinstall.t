@@ -23,7 +23,7 @@ use warnings;
   SKIP: {
     skip "can't run this test without Test::Output", 1 unless $to_avail;
     Sub::Install::reinstall_sub({ code => \&ok, as => 'tmp_ok' });
-    
+
     my $expected_warning = <<'END_WARNING';
 Prototype mismatch: sub main::tmp_ok ($;$) vs ($$;$) at t/reinstall.t line 32
 END_WARNING
@@ -33,6 +33,7 @@ END_WARNING
     );
 
     $stderr =~ s!\\!/!g;
+    $stderr =~ s!\.$!!g;
     is(
       $stderr,
       $expected_warning,

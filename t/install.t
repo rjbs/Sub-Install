@@ -21,7 +21,7 @@ use warnings;
   SKIP: {
     skip "can't run this test without Test::Output", 1 unless $to_avail;
     Sub::Install::install_sub({ code => \&ok, as => 'tmp_ok' });
-    
+
     my $expected_warning = <<'END_WARNING';
 Subroutine main::tmp_ok redefined at t/install.t line 31
 Prototype mismatch: sub main::tmp_ok ($;$) vs ($$;$) at t/install.t line 31
@@ -31,6 +31,7 @@ END_WARNING
       sub { Sub::Install::install_sub({ code => \&is, as => 'tmp_ok' }) }
     );
 
+    $stderr =~ s!\.$!!gm;
     $stderr =~ s!\\!/!g;
     is(
       $stderr,
