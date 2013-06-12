@@ -31,7 +31,7 @@ our $VERSION = '0.926';
 =head1 DESCRIPTION
 
 This module makes it easy to install subroutines into packages without the
-unslightly mess of C<no strict> or typeglobs lying about where just anyone can
+unsightly mess of C<no strict> or typeglobs lying about where just anyone can
 see them.
 
 =head1 FUNCTIONS
