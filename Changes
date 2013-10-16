@@ -1,6 +1,8 @@
 Revision history for Sub-Install
 
 {{$NEXT}}
+
+0.927     2013-10-15 22:46:38 America/New_York
         rebuild using Dist::Zilla, update links to repo, metadata, etc.
 
         typo fixes, thanks David Steinbrunner
