@@ -1,5 +1,8 @@
 Revision history for Sub-Install
 
+{{$NEXT}}
+        rebuild using Dist::Zilla, update links to repo, metadata, etc.
+
 0.926   2012-02-26
         cope with terminal dots from new Carp
 

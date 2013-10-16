@@ -1,22 +1,10 @@
-package Sub::Install;
-
-use warnings;
 use strict;
+use warnings;
+package Sub::Install;
+# ABSTRACT: install subroutines into packages easily
 
 use Carp;
 use Scalar::Util ();
-
-=head1 NAME
-
-Sub::Install - install subroutines into packages easily
-
-=head1 VERSION
-
-version 0.926
-
-=cut
-
-our $VERSION = '0.926';
 
 =head1 SYNOPSIS
 
@@ -34,9 +22,7 @@ This module makes it easy to install subroutines into packages without the
 unslightly mess of C<no strict> or typeglobs lying about where just anyone can
 see them.
 
-=head1 FUNCTIONS
-
-=head2 install_sub
+=func install_sub
 
   Sub::Install::install_sub({
    code => \&subroutine,
@@ -78,7 +64,7 @@ is the same as:
     as   => 'dance',
   });
 
-=head2 reinstall_sub
+=func reinstall_sub
 
 This routine behaves exactly like C<L</install_sub>>, but does not emit a
 warning if warnings are on and the destination is already defined.
@@ -207,7 +193,7 @@ BEGIN {
   });
 }
 
-=head2 install_installers
+=func install_installers
 
 This routine is provided to allow Sub::Install compatibility with
 Sub::Installer.  It installs C<install_sub> and C<reinstall_sub> methods into
@@ -271,7 +257,7 @@ L<Sub::Exporter>.
 
 sub exporter {
   my ($arg) = @_;
-  
+
   my %is_exported = map { $_ => undef } @{ $arg->{exports} };
 
   sub {
@@ -304,25 +290,10 @@ This is a complete Exporter.pm replacement, built atop Sub::Install.
 
 =back
 
-=head1 AUTHOR
-
-Ricardo Signes, C<< <rjbs@cpan.org> >>
+=head1 EXTRA CREDITS
 
 Several of the tests are adapted from tests that shipped with Damian Conway's
 Sub-Installer distribution.
-
-=head1 BUGS
-
-Please report any bugs or feature requests through the web interface at
-L<http://rt.cpan.org>.  I will be notified, and then you'll automatically be
-notified of progress on your bug as I make changes.
-
-=head1 COPYRIGHT
-
-Copyright 2005-2006 Ricardo Signes, All Rights Reserved.
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
 
 =cut
 
