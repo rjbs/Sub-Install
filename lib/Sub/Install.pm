@@ -125,9 +125,9 @@ my $_redef_warn_re;
 BEGIN {
   $_misc_warn_re = qr/
     Prototype\ mismatch:\ sub\ .+?  |
-    Constant subroutine \S+ redefined
+    Constant subroutine .+? redefined
   /x;
-  $_redef_warn_re = qr/Subroutine\ \S+\ redefined/x;
+  $_redef_warn_re = qr/Subroutine\ .+?\ redefined/x;
 }
 
 my $eow_re;
