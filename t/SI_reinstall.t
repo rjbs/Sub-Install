@@ -5,13 +5,14 @@ Sub::Install::install_installers('UNIVERSAL');
 # Sub::Installer 0.0.2
 
 use Test::More 'no_plan';
+use Scalar::Util qw/reftype/;
 use warnings;
 
 # Install a sub in a package...
 
 my $sub_ref = main->reinstall_sub({ ok1 => \&ok });
 
-is ref $sub_ref, 'CODE'                  => 'reinstall returns code ref';
+is reftype $sub_ref, 'CODE'                  => 'reinstall returns code ref';
 
 is_deeply \&ok, $sub_ref                 => 'reinstall returns correct code ref';
 
@@ -24,7 +25,7 @@ $SIG{__WARN__} = sub { ok 0 => "warned unexpected: @_" if $_[0] =~ /redefined/ }
 
 $sub_ref = main->reinstall_sub({ ok1 => \&is });
 
-is ref $sub_ref, 'CODE'                  => 'reinstall2 returns code ref';
+is reftype $sub_ref, 'CODE'                  => 'reinstall2 returns code ref';
 
 is_deeply \&is, $sub_ref                 => 'reinstall2 returns correct code ref';
 
@@ -34,7 +35,7 @@ ok1(1,1                                  => 'reinstalled sub reruns');
 
 $sub_ref = Other->reinstall_sub({ ok2 => \&ok });
 
-is ref $sub_ref, 'CODE'                  => 'reinstall2 returns code ref';
+is reftype $sub_ref, 'CODE'                  => 'reinstall2 returns code ref';
 
 is_deeply \&ok, $sub_ref                 => 'reinstall2 returns correct code ref';
 
