@@ -14,7 +14,8 @@ use Scalar::Util ();
   Sub::Install::install_sub({
     code => sub { ... },
     into => $package,
-    as   => $subname
+    as   => $subname,
+    name => 1,
   });
 
 =head1 DESCRIPTION
@@ -29,6 +30,7 @@ see them.
    code => \&subroutine,
    into => "Finance::Shady",
    as   => 'launder',
+   name => 1,
   });
 
 This routine installs a given code reference into a package as a normal
@@ -64,6 +66,10 @@ is the same as:
     code => Person::InPain->can('twitch'),
     as   => 'dance',
   });
+
+If C<name> is true, the subroutine will have its name set according to where it
+is installed to, to identify it in stack traces. This feature is available
+since Sub::Install 0.929, and requires L<Sub::Util> 1.40+.
 
 =func reinstall_sub
 
@@ -114,6 +120,13 @@ sub _build_public_installer {
 
     Carp::croak "couldn't determine name under which to install subroutine"
       unless $arg->{as};
+
+    if ($arg->{name}) {
+      require Sub::Util;
+      Sub::Util->VERSION('1.40');
+      my $name = "$arg->{into}::$arg->{as}";
+      $arg->{code} = Sub::Util::set_subname($name, $arg->{code});
+    }
 
     $installer->(@$arg{qw(into as code) });
   }
